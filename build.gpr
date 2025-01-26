@@ -8,6 +8,7 @@ project Build is
 
    package Builder is
       for Switches ("ada") use ("-g");
+      for Executable ("main.adb") use "jubilent-fortnight";
    end Builder;
 
    package Compiler is
@@ -21,6 +22,8 @@ project Build is
    package Linker is
       for Switches ("ada") use ("-g");
    end Linker;
+
+   for Exec_Dir use ".";
 
 end Build;
 

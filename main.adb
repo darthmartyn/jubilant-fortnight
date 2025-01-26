@@ -4,6 +4,8 @@ with Ada.Strings;            use Ada.Strings;
 with Ada.Exceptions;         use Ada.Exceptions;
 with Ada.Assertions;         use Ada.Assertions;
 with Ada.Characters.Latin_1; use Ada.Characters.Latin_1;
+with Ada.Directories;        use Ada.Directories;
+with Ada.Command_Line;       use Ada.Command_Line;
 
 procedure Main is
 
@@ -191,6 +193,33 @@ procedure Main is
    Main_Program_File_Handle : Ada.Text_IO.File_Type;
 
 begin
+
+   -- The program needs 1 command line option, the name of a directory
+   -- in which to generate the source code. It can already exist and all
+   -- files to be generated that exist in it, will be overwritten.
+
+   if Argument_Count /= 1 then
+      Put_Line ("usage: jubilent-fortnight.exe {output directory}");
+      Set_Exit_Status (Failure);
+      return;
+   end if;
+
+   Output_Directory_Handling :
+   declare
+      Directory_Name : constant String := Argument (1);
+   begin
+
+      if not Exists (Directory_Name) then
+         Create_Directory (New_Directory => Directory_Name);
+      elsif Kind (Directory_Name) /= Directory then
+         Put_Line (Directory_Name & " is not a directory");
+         Set_Exit_Status (Failure);
+         return;
+      end if;
+
+      Set_Directory (Directory_Name);
+
+   end Output_Directory_Handling;
 
    For_Each_Package :
    for Package_Index in Package_Count_T loop
@@ -398,7 +427,10 @@ begin
 
    end Write_GPR_File;
 
+   Set_Exit_Status (Success);
+
 exception
    when Err : others =>
       Put_Line (Ada.Exceptions.Exception_Information (Err));
+      Set_Exit_Status (Failure);
 end Main;
