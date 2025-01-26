@@ -1,2 +1,4 @@
-obj
-main.exe
+*
+!main.adb
+!build.gpr
+!.gitgnore
