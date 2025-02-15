@@ -427,6 +427,13 @@ begin
 
    end Write_GPR_File;
 
+   -- Write a VSCode settings.json in a .vscode subdirectory
+   Create_And_Write_VSCode_Settings_File:
+   declare
+   begin
+      null;
+   end Create_And_Write_VSCode_Settings_File;
+
    Set_Exit_Status (Success);
 
 exception
