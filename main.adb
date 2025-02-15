@@ -219,6 +219,31 @@ begin
 
       Set_Directory (Directory_Name);
 
+      -- Write a VSCode settings.json in a .vscode subdirectory
+      Create_And_Write_VSCode_Settings_File:
+      declare
+         VSCode_Directory_Name : constant String := ".vscode";
+         VSCode_Settings_File_Handle : Ada.Text_IO.File_Type;       
+      begin
+         
+         Create_Directory (VSCode_Directory_Name);
+         Set_Directory (VSCode_Directory_Name);         
+
+         Create
+           (File => VSCode_Settings_File_Handle,
+            Mode => Out_File,
+            Name => "settings.json");
+
+         Put_Line
+           (File => VSCode_Settings_File_Handle,
+            Item => "{ ""ada.projectFile"": ""build.gpr""}");
+
+         Close (File => VSCode_Settings_File_Handle);
+
+         Set_Directory (Directory_Name);
+
+      end Create_And_Write_VSCode_Settings_File;
+
    end Output_Directory_Handling;
 
    For_Each_Package :
