@@ -14,7 +14,7 @@ procedure Main is
    --    gnatmetric --lines-code -P build.gpr
    --
    type Package_Count_T is range 1 .. 10;
-   type Subprogram_Count_Type is range 1 .. 7_700;
+   type Subprogram_Count_Type is range 1 .. 1_925;
 
    Main_Program_Signature : constant String := "procedure Main is";
    Main_Program_End       : constant String := "end Main;";
@@ -61,40 +61,18 @@ procedure Main is
             Put_Line
               (File => Into_Spec,
                Item =>
-                 "procedure"
+                 "function"
                  & Ada.Characters.Latin_1.Space
-                 & Proc_Name
-                 & "(I : in out Interfaces.Unsigned_32);");
+                 & Func_Name
+                 & " (I : in Interfaces.Unsigned_32) return Interfaces.Unsigned_32;");
 
             Put_Line
               (File => Into_Spec,
                Item =>
-                 "function"
-                 & Ada.Characters.Latin_1.Space
-                 & Func_Name
-                 & "(I : in Interfaces.Unsigned_32)"
-                 & LF
-                 & "return Interfaces.Unsigned_32;");
-
-            Put_Line
-              (File => Into_Body,
-               Item =>
-                 LF
-                 & "procedure"
+                 "procedure"
                  & Ada.Characters.Latin_1.Space
                  & Proc_Name
-                 & "(I : in out Interfaces.Unsigned_32) is"
-                 & LF
-                 & "begin"
-                 & LF
-                 & (if Subprogram_Index mod 2 = 0
-                    then "I := Interfaces.Unsigned_32'Pred (I);"
-                    else "I := Interfaces.Unsigned_32'Succ (I);")
-                 & LF
-                 & "end"
-                 & Ada.Characters.Latin_1.Space
-                 & Proc_Name
-                 & ";");
+                 & " (I : in out Interfaces.Unsigned_32);");
 
             Put_Line
               (File => Into_Body,
@@ -103,19 +81,37 @@ procedure Main is
                  & "function"
                  & Ada.Characters.Latin_1.Space
                  & Func_Name
-                 & "(I : in Interfaces.Unsigned_32)"
-                 & LF
-                 & "return Interfaces.Unsigned_32 is"
+                 & " (I : in Interfaces.Unsigned_32) return Interfaces.Unsigned_32 is"
                  & LF
                  & "begin"
-                 & LF
+                 & LF & HT
                  & (if Subprogram_Index mod 2 = 0
                     then "return Interfaces.Unsigned_32'Succ (I);"
                     else "return Interfaces.Unsigned_32'Pred (I);")
+                 & LF
                  & "end"
                  & Ada.Characters.Latin_1.Space
                  & Func_Name
                  & ";");
+
+            Put_Line
+              (File => Into_Body,
+               Item =>
+                 LF
+                 & "procedure"
+                 & Ada.Characters.Latin_1.Space
+                 & Proc_Name
+                 & " (I : in out Interfaces.Unsigned_32) is"
+                 & LF
+                 & "begin"
+                 & LF & HT
+                 & "I := " & Func_Name & " (I);"
+                 & LF
+                 & "end"
+                 & Ada.Characters.Latin_1.Space
+                 & Proc_Name
+                 & ";");
+
 
          end Write_Subprogram;
 
@@ -209,13 +205,11 @@ begin
       Directory_Name : constant String := Argument (1);
    begin
 
-      if not Exists (Directory_Name) then
-         Create_Directory (New_Directory => Directory_Name);
-      elsif Kind (Directory_Name) /= Directory then
-         Put_Line (Directory_Name & " is not a directory");
-         Set_Exit_Status (Failure);
-         return;
+      if Exists (Directory_Name) then
+         Delete_Tree (Directory_Name);
       end if;
+
+      Create_Directory (New_Directory => Directory_Name);
 
       Set_Directory (Directory_Name);
 
@@ -336,7 +330,9 @@ begin
    end Produce_Source_File_List;
 
    Create
-     (File => Main_Program_File_Handle, Mode => Out_File, Name => "main.adb");
+     (File => Main_Program_File_Handle,
+      Mode => Out_File,
+      Name => "main.adb");
 
    For_Each_Package_With_Claus :
    for Package_Index in Package_Count_T loop
@@ -363,9 +359,9 @@ begin
         (File => Main_Program_File_Handle,
          Item =>
            "with Interfaces; use Interfaces;"
+           & LF & LF
            & "procedure Main is"
-           & LF
-           & HT
+           & LF & HT
            & "An_Unsigned_32 : Unsigned_32 := Unsigned_32'First;"
            & LF
            & "begin"
