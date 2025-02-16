@@ -112,7 +112,6 @@ procedure Main is
                  & Proc_Name
                  & ";");
 
-
          end Write_Subprogram;
 
       end loop For_Each_Subprogram;
