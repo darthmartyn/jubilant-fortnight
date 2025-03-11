@@ -14,7 +14,7 @@ procedure Main is
    --    gnatmetric --lines-code -P build.gpr
    --
    type Package_Count_T is range 1 .. 10;
-   type Subprogram_Count_Type is range 1 .. 7_700;
+   type Subprogram_Count_Type is range 1 .. 1_925;  -- roughly 250k SLOC
 
    Main_Program_Signature : constant String := "procedure Main is";
    Main_Program_End       : constant String := "end Main;";
@@ -61,60 +61,49 @@ procedure Main is
             Put_Line
               (File => Into_Spec,
                Item =>
-                 "procedure"
-                 & Ada.Characters.Latin_1.Space
-                 & Proc_Name
-                 & "(I : in out Interfaces.Unsigned_32);");
+                 "function "
+                 & Func_Name
+                 & " (I : in Interfaces.Unsigned_32) return Interfaces.Unsigned_32;");
 
             Put_Line
               (File => Into_Spec,
                Item =>
-                 "function"
-                 & Ada.Characters.Latin_1.Space
-                 & Func_Name
-                 & "(I : in Interfaces.Unsigned_32)"
-                 & LF
-                 & "return Interfaces.Unsigned_32;");
+                 "procedure "
+                 & Proc_Name
+                 & " (I : in out Interfaces.Unsigned_32);");
 
             Put_Line
               (File => Into_Body,
                Item =>
                  LF
-                 & "procedure"
-                 & Ada.Characters.Latin_1.Space
-                 & Proc_Name
-                 & "(I : in out Interfaces.Unsigned_32) is"
+                 & "function "
+                 & Func_Name
+                 & " (I : in Interfaces.Unsigned_32) return Interfaces.Unsigned_32 is"
                  & LF
                  & "begin"
-                 & LF
+                 & LF & HT
                  & (if Subprogram_Index mod 2 = 0
-                    then "I := Interfaces.Unsigned_32'Pred (I);"
-                    else "I := Interfaces.Unsigned_32'Succ (I);")
+                    then "return Interfaces.Unsigned_32'Succ (I);"
+                    else "return Interfaces.Unsigned_32'Pred (I);")
                  & LF
-                 & "end"
-                 & Ada.Characters.Latin_1.Space
-                 & Proc_Name
+                 & "end "
+                 & Func_Name
                  & ";");
 
             Put_Line
               (File => Into_Body,
                Item =>
                  LF
-                 & "function"
-                 & Ada.Characters.Latin_1.Space
-                 & Func_Name
-                 & "(I : in Interfaces.Unsigned_32)"
-                 & LF
-                 & "return Interfaces.Unsigned_32 is"
+                 & "procedure "
+                 & Proc_Name
+                 & " (I : in out Interfaces.Unsigned_32) is"
                  & LF
                  & "begin"
+                 & LF & HT
+                 & "I := " & Func_Name & " (I);"
                  & LF
-                 & (if Subprogram_Index mod 2 = 0
-                    then "return Interfaces.Unsigned_32'Succ (I);"
-                    else "return Interfaces.Unsigned_32'Pred (I);")
-                 & "end"
-                 & Ada.Characters.Latin_1.Space
-                 & Func_Name
+                 & "end "
+                 & Proc_Name
                  & ";");
 
          end Write_Subprogram;
@@ -144,41 +133,18 @@ procedure Main is
                   Subprogram_Index_As_String : constant String :=
                     Trim (Subprogram_Index'Img, Ada.Strings.Left);
 
-                  Proc_Name : constant String :=
-                    Package_Index_As_String
-                    & ".P"
-                    & Subprogram_Index_As_String;
-                  Func_Name : constant String :=
-                    Package_Index_As_String
-                    & ".F"
-                    & Subprogram_Index_As_String;
+                  Proc_Name : constant String := Package_Index_As_String & ".P" & Subprogram_Index_As_String;
+                  Func_Name : constant String := Package_Index_As_String & ".F" & Subprogram_Index_As_String;
 
                begin
 
                   Put_Line
                     (File => Into,
-                     Item =>
-                       HT
-                       & Proc_Name
-                       & Ada.Characters.Latin_1.Space
-                       & Left_Parenthesis
-                       & "I => An_Unsigned_32"
-                       & Right_Parenthesis
-                       & Semicolon
-                       & LF);
+                     Item => HT & Proc_Name & " (I => An_Unsigned_32);" & LF);
 
                   Put_Line
                     (File => Into,
-                     Item =>
-                       HT
-                       & "An_Unsigned_32 := "
-                       & Func_Name
-                       & Ada.Characters.Latin_1.Space
-                       & Left_Parenthesis
-                       & "I => An_Unsigned_32"
-                       & Right_Parenthesis
-                       & Semicolon
-                       & LF);
+                     Item => HT & "An_Unsigned_32 := " & Func_Name & " (I => An_Unsigned_32);" & LF);
 
                end For_Subprogram;
 
@@ -209,15 +175,38 @@ begin
       Directory_Name : constant String := Argument (1);
    begin
 
-      if not Exists (Directory_Name) then
-         Create_Directory (New_Directory => Directory_Name);
-      elsif Kind (Directory_Name) /= Directory then
-         Put_Line (Directory_Name & " is not a directory");
-         Set_Exit_Status (Failure);
-         return;
+      if Exists (Directory_Name) then
+         Delete_Tree (Directory_Name);
       end if;
 
+      Create_Directory (New_Directory => Directory_Name);
+
       Set_Directory (Directory_Name);
+
+      -- Write a VSCode settings.json in a .vscode subdirectory
+      Create_And_Write_VSCode_Settings_File:
+      declare
+         VSCode_Directory_Name : constant String := ".vscode";
+         VSCode_Settings_File_Handle : Ada.Text_IO.File_Type;       
+      begin
+         
+         Create_Directory (VSCode_Directory_Name);
+         Set_Directory (VSCode_Directory_Name);         
+
+         Create
+           (File => VSCode_Settings_File_Handle,
+            Mode => Out_File,
+            Name => "settings.json");
+
+         Put_Line
+           (File => VSCode_Settings_File_Handle,
+            Item => "{ ""ada.projectFile"": ""build.gpr""}");
+
+         Close (File => VSCode_Settings_File_Handle);
+
+         Set_Directory (Directory_Name);
+
+      end Create_And_Write_VSCode_Settings_File;
 
    end Output_Directory_Handling;
 
@@ -311,7 +300,9 @@ begin
    end Produce_Source_File_List;
 
    Create
-     (File => Main_Program_File_Handle, Mode => Out_File, Name => "main.adb");
+     (File => Main_Program_File_Handle,
+      Mode => Out_File,
+      Name => "main.adb");
 
    For_Each_Package_With_Claus :
    for Package_Index in Package_Count_T loop
@@ -338,9 +329,9 @@ begin
         (File => Main_Program_File_Handle,
          Item =>
            "with Interfaces; use Interfaces;"
+           & LF & LF
            & "procedure Main is"
-           & LF
-           & HT
+           & LF & HT
            & "An_Unsigned_32 : Unsigned_32 := Unsigned_32'First;"
            & LF
            & "begin"
